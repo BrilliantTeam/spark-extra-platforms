@@ -41,6 +41,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 public class FoliaTickStatistics implements TickStatistics {
+    private static final boolean MOONRISE_TICK_REPORT_AVAILABLE;
+
+    static {
+        boolean available;
+        try {
+            Class.forName("ca.spottedleaf.moonrise.common.time.TickData$TickReportData");
+            available = true;
+        } catch (ClassNotFoundException e) {
+            available = false;
+        }
+        MOONRISE_TICK_REPORT_AVAILABLE = available;
+    }
+
     private final Supplier<List<ThreadedRegion<TickRegionData, TickRegionSectionData>>> regionSupplier;
 
     public FoliaTickStatistics(Server server) {
@@ -79,7 +92,7 @@ public class FoliaTickStatistics implements TickStatistics {
 
     @Override
     public boolean isDurationSupported() {
-        return true;
+        return MOONRISE_TICK_REPORT_AVAILABLE;
     }
 
     @Override
@@ -107,6 +120,11 @@ public class FoliaTickStatistics implements TickStatistics {
     }
 
     public double tps(StatisticWindow.TicksPerSecond window) {
+        if (!MOONRISE_TICK_REPORT_AVAILABLE) return 20.0;
+        return tpsInternal(window);
+    }
+
+    private double tpsInternal(StatisticWindow.TicksPerSecond window) {
         long nanoTime = System.nanoTime();
         return this.regionSupplier.get().stream()
                 .map(region -> region.getData().getRegionSchedulingHandle())
@@ -124,6 +142,11 @@ public class FoliaTickStatistics implements TickStatistics {
     }
 
     public DoubleAverageInfo mspt(StatisticWindow.MillisPerTick window) {
+        if (!MOONRISE_TICK_REPORT_AVAILABLE) return null;
+        return msptInternal(window);
+    }
+
+    private DoubleAverageInfo msptInternal(StatisticWindow.MillisPerTick window) {
         long nanoTime = System.nanoTime();
         List<SegmentedAverage> averages = this.regionSupplier.get().stream()
                 .map(region -> region.getData().getRegionSchedulingHandle())
